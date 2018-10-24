@@ -1,23 +1,20 @@
-node('dind-node') {
-  withMaven(maven:'M3') {
+node {
+  withMaven(maven:'localMaven') {
     stage('Checkout') {
-      git url: 'https://github.com/piomin/sample-spring-microservices-new.git', credentialsId: 'piomin-github', branch: 'master'
+      checkout scm
     }
     stage('Build') {
-      dir('config-service') {
-        sh 'mvn clean install'
-        def pom = readMavenPom file:'pom.xml'
-        print pom.version
-        env.version = pom.version
-        currentBuild.description = "Release: ${env.version}"
-      }
+      sh 'mvn clean install'
+      def pom = readMavenPom file:'pom.xml'
+      print pom.version
+      env.version = pom.version
+      currentBuild.description = "Release: ${env.version}"
     }
+
     stage('Image') {
-      dir ('config-service') {
-        docker.withRegistry('https://192.168.99.100:5000') {
-          def app = docker.build "xisana/config-service:${env.version}"
-          app.push()
-        }
+      docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+        def app = docker.build "xisana/config-service:${env.version}"
+        app.push()
       }
     }
   }
